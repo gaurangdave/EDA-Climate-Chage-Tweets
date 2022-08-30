@@ -87,6 +87,17 @@ hourly_tweets_last_six_months = px.scatter(tweets.sort_values(by=["time"]),
 }
 )
 
+## Types of Tweets
+hashtag_condition = tweets["hashtag_count"] > 0
+
+## Number of tweets with hashtags vs number of tweets without hashtags. 
+type_of_tweet_data = {
+     "Type": ["Tweets with atleast one hashtag", "Tweets without any hashtags"],
+     "Count": [tweets[hashtag_condition]["text"].count(), tweets[~hashtag_condition]["text"].count()]
+}
+
+type_of_tweet_fig = px.pie(pd.DataFrame(type_of_tweet_data), values='Count', names='Type')
+
 # Set Layout
 app.layout = html.Div(children=[
     html.H1('Exploratory Data Analysis - Climate Change Tweets'),
@@ -98,7 +109,9 @@ app.layout = html.Div(children=[
     html.H2('Climate Change Tweets - Hourly Trends with Impact'),
     dcc.Graph(figure=hourly_tweets_last_six_months),
     html.H2('Climate Change Tweets - Tweet Impact Trends'),
-    dcc.Graph(figure=tweet_impact_trends)
+    dcc.Graph(figure=tweet_impact_trends),
+    html.H2('Climate Change Tweets - With Hashtags vs Without Hashtags'),
+    dcc.Graph(figure=type_of_tweet_fig)
 
 ], className="twelve columns")
 
