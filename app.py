@@ -6,6 +6,7 @@ import numpy as np
 from dash import dcc, html
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
+import base64
 
 
 # Constants
@@ -35,6 +36,8 @@ app.title = title
 # Reading the data file.
 # added encoding because data also has emojis
 tweets = pd.read_csv('./data/climate_change_tweets_v2.csv', encoding="utf-8")
+image_filename = './assets/word_cloud.png'
+encoded_image = base64.b64encode(open(image_filename, 'rb').read())
 
 # Constant Figures
 # Monthly Trends
@@ -111,13 +114,18 @@ type_of_tweet_fig = px.pie(pd.DataFrame(
 # Months List
 months = list(tweets["month_name"].unique())
 days = tweets[tweets["month_name"] == months[0]]["day"].unique()
-## We also want to associate date with hashtags to more time series analysis
+# We also want to associate date with hashtags to more time series analysis
 # hashtag_frequency = {}
 
 # Set Layout
 app.layout = html.Div(children=[
     dbc.Row(html.H1('Exploratory Data Analysis - Climate Change Tweets',
             style={'textAlign': 'center'})),
+    html.Br(),
+    html.Div(children=[html.Img(src=image_filename)], style={
+        "display": "flex",
+        "justify-content": "center"
+    }),
     html.Br(),
     dbc.Row(html.H3('Monthly Trends',
             style={'textAlign': 'center'})),
@@ -242,7 +250,7 @@ app.layout = html.Div(children=[
 
 ], className="twelve columns")
 
-## Call back to update days dropdown based on selected month
+# Call back to update days dropdown based on selected month
 # @app.callback(
 #     [Output("day", "options"), Output("day", "value")],
 #     [Input("month", "value")]
@@ -250,6 +258,7 @@ app.layout = html.Div(children=[
 # def update_hashtag_day(month):
 #     days = tweets[tweets["month_name"] == month]["day"].unique()
 #     return days,days[0]
+
 
 @app.callback(
     Output("hashtag_trends_graph", "figure"),
@@ -261,27 +270,32 @@ def update_hashtag_graph(month):
     # day_condition = tweets["day"] == day
     global hashtag_frequency
     hashtag_frequency = {}
-    tweets[(hashtag_condition) & (month_condition)].apply(calculate_hashtag_frequency, axis="columns")
-    hashtag_data = pd.DataFrame(list(hashtag_frequency.items()), columns=["hashtags", "count"])
+    tweets[(hashtag_condition) & (month_condition)].apply(
+        calculate_hashtag_frequency, axis="columns")
+    hashtag_data = pd.DataFrame(
+        list(hashtag_frequency.items()), columns=["hashtags", "count"])
     hashtag_data.sort_values(by="count", ascending=False).head(10)
-    hashtag_fig = px.bar(hashtag_data.sort_values(by="count", ascending=False).head(10), x='hashtags', y='count')
+    hashtag_fig = px.bar(hashtag_data.sort_values(
+        by="count", ascending=False).head(10), x='hashtags', y='count')
     return hashtag_fig
 
-## Function to clean hashtags and calculate their frequency. 
-## Ideally this can be done in 
+# Function to clean hashtags and calculate their frequency.
+# Ideally this can be done in
+
+
 def calculate_hashtag_frequency(row):
-     tag = row["hashtags"]
-     separate_tags = [tag.lower()
-     .rstrip(".")
-     .rstrip(")")
-     .rstrip("!")
-     .rstrip("?") for tag in tag.split(",")]
-     for tag in separate_tags:
-          ## only count non empty strings
-          if len(tag.strip()) > 0:
-               if len(tag.strip()) > 0  and tag not in hashtag_frequency:
-                    hashtag_frequency[tag] = 0
-               hashtag_frequency[tag] += 1
+    tag = row["hashtags"]
+    separate_tags = [tag.lower()
+                     .rstrip(".")
+                     .rstrip(")")
+                     .rstrip("!")
+                     .rstrip("?") for tag in tag.split(",")]
+    for tag in separate_tags:
+        # only count non empty strings
+        if len(tag.strip()) > 0:
+            if len(tag.strip()) > 0 and tag not in hashtag_frequency:
+                hashtag_frequency[tag] = 0
+            hashtag_frequency[tag] += 1
 
 
 # Deploy App
