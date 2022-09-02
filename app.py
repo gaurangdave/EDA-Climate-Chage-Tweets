@@ -107,6 +107,13 @@ type_of_tweet_data = {
 type_of_tweet_fig = px.pie(pd.DataFrame(
     type_of_tweet_data), values='Count', names='Type', title="Distribution of tweets with hashtags vs tweets without hashtags.")
 
+
+# Months List
+months = list(tweets["month_name"].unique())
+days = tweets[tweets["month_name"] == months[0]]["day"].unique()
+## We also want to associate date with hashtags to more time series analysis
+# hashtag_frequency = {}
+
 # Set Layout
 app.layout = html.Div(children=[
     dbc.Row(html.H1('Exploratory Data Analysis - Climate Change Tweets',
@@ -179,7 +186,7 @@ app.layout = html.Div(children=[
         dbc.Col(
             html.Div(children=[
                 html.H4('Observations'),
-                  html.Ul(
+                html.Ul(
                     children=[
                      html.Li("Average Impact : 0.00222"),
                      html.Li("Maximum Impact : 1.0"),
@@ -189,7 +196,7 @@ app.layout = html.Div(children=[
                      html.Li(
                          "Outlier tweet with impact 1 is from POTUS"),
                      ])
-    
+
             ]),
             width=3
         ),
@@ -203,16 +210,79 @@ app.layout = html.Div(children=[
                 html.H4('Observations'),
                 html.Ul(
                     children=[
-                        html.Li("Going against common intuition that tweets normally have hashtags - majority climate change tweets do not have hashtags associated with them.")
+                        html.Li(
+                            "Going against common intuition that tweets normally have hashtags - majority climate change tweets do not have hashtags associated with them.")
                     ]
                 )
             ]),
             width=3
         ),
         dbc.Col(dcc.Graph(figure=type_of_tweet_fig), width=9)
-    ])
+    ]),
+    dbc.Row(html.H3('Trending Hashtags'), style={'textAlign': 'center'}),
+    dbc.Row(
+        [dbc.Col(html.Div(children=[
+            dcc.Dropdown(
+                id="month",
+                options=months,
+                value=months[0]
+            ),
+            html.Br(),
+            # dcc.Dropdown(
+            #     id="day",
+            #     options=days,
+            #     value=days[0]
+            # )
+        ]), width=3),
+            dbc.Col(html.Div(children=[
+                dcc.Graph(id="hashtag_trends_graph")
+            ]
+            ), width=9)]
+    )
 
 ], className="twelve columns")
+
+## Call back to update days dropdown based on selected month
+# @app.callback(
+#     [Output("day", "options"), Output("day", "value")],
+#     [Input("month", "value")]
+# )
+# def update_hashtag_day(month):
+#     days = tweets[tweets["month_name"] == month]["day"].unique()
+#     return days,days[0]
+
+@app.callback(
+    Output("hashtag_trends_graph", "figure"),
+    [Input("month", "value")]
+)
+def update_hashtag_graph(month):
+    hashtag_condition = tweets["hashtag_count"] > 0
+    month_condition = tweets["month_name"] == month
+    # day_condition = tweets["day"] == day
+    global hashtag_frequency
+    hashtag_frequency = {}
+    tweets[(hashtag_condition) & (month_condition)].apply(calculate_hashtag_frequency, axis="columns")
+    hashtag_data = pd.DataFrame(list(hashtag_frequency.items()), columns=["hashtags", "count"])
+    hashtag_data.sort_values(by="count", ascending=False).head(10)
+    hashtag_fig = px.bar(hashtag_data.sort_values(by="count", ascending=False).head(10), x='hashtags', y='count')
+    return hashtag_fig
+
+## Function to clean hashtags and calculate their frequency. 
+## Ideally this can be done in 
+def calculate_hashtag_frequency(row):
+     tag = row["hashtags"]
+     separate_tags = [tag.lower()
+     .rstrip(".")
+     .rstrip(")")
+     .rstrip("!")
+     .rstrip("?") for tag in tag.split(",")]
+     for tag in separate_tags:
+          ## only count non empty strings
+          if len(tag.strip()) > 0:
+               if len(tag.strip()) > 0  and tag not in hashtag_frequency:
+                    hashtag_frequency[tag] = 0
+               hashtag_frequency[tag] += 1
+
 
 # Deploy App
 if __name__ == '__main__':
